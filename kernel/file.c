@@ -31,27 +31,32 @@ struct kmem_cache *file_cache;
 void
 fileinit(void)
 {
-  debug("[FILE] fileinit\n"); // example of using debug, you can modify this
+  debug("[FILE] fileinit\n");
   initlock(&ftable.lock, "ftable");
+
+  // Initialize file_cache using kmem_cache_create
+  file_cache = kmem_cache_create("file", sizeof(struct file));
+  if (!file_cache) {
+    panic("Failed to initialize file_cache\n");
+  }
 }
 
-// Allocate a file structure.
+// Allocate a file structure using slab allocator
 struct file*
 filealloc(void)
 {
-  debug("[FILE] filealloc\n"); // example of using debug, you can modify this
-  struct file *f;
+  debug("[FILE] filealloc\n");
 
-  acquire(&ftable.lock);
-  for(f = ftable.file; f < ftable.file + NFILE; f++){
-    if(f->ref == 0){
-      f->ref = 1;
-      release(&ftable.lock);
-      return f;
-    }
+  struct file *f = (struct file *)kmem_cache_alloc(file_cache);
+  if (!f) {
+    return 0; // Allocation failed
   }
-  release(&ftable.lock);
-  return 0;
+
+  // Initialize the file structure
+  memset(f, 0, sizeof(struct file));
+  f->ref = 1;
+
+  return f;
 }
 
 // Increment ref count for file f.
@@ -66,11 +71,11 @@ filedup(struct file *f)
   return f;
 }
 
-// Close file f.  (Decrement ref count, close when reaches 0.)
+// Close file f and free it using slab allocator
 void
 fileclose(struct file *f)
 {
-  struct file ff;
+  if (!f) return;
 
   acquire(&ftable.lock);
   if(f->ref < 1)
@@ -79,19 +84,20 @@ fileclose(struct file *f)
     release(&ftable.lock);
     return;
   }
-  debug("[FILE] fileclose\n"); // example of using debug, you can modify this
-  ff = *f;
-  f->ref = 0;
-  f->type = FD_NONE;
   release(&ftable.lock);
 
-  if(ff.type == FD_PIPE){
-    pipeclose(ff.pipe, ff.writable);
-  } else if(ff.type == FD_INODE || ff.type == FD_DEVICE){
+  debug("[FILE] fileclose\n");
+
+  if(f->type == FD_PIPE){
+    pipeclose(f->pipe, f->writable);
+  } else if(f->type == FD_INODE || f->type == FD_DEVICE){
     begin_op();
-    iput(ff.ip);
+    iput(f->ip);
     end_op();
   }
+
+  // Free the file structure using slab allocator
+  kmem_cache_free(file_cache, f);
 }
 
 // Get metadata about file f.
@@ -190,5 +196,11 @@ filewrite(struct file *f, uint64 addr, int n)
   }
 
   return ret;
+}
+
+// System call to print slab information for file_cache
+void sys_printfslab(void)
+{
+  print_kmem_cache(file_cache, fileprint_metadata);
 }
 

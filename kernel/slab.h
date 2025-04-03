@@ -2,10 +2,11 @@
 
 #include "spinlock.h"
 #include "types.h"
+#include "list.h"
 
-// struct run {
-//   struct run *next;
-// };
+struct run {
+  struct run *next;
+};
 
 /**
  * struct slab - Represents a slab in the slab allocator.
@@ -13,16 +14,10 @@
  */
 struct slab
 {
-  // TODO: Choose the type of freelist from
-  //    1. void **
-  //    2. struct run *
-  // <ptr> freelist;             // Linked list of free objects
-
-  // TODO: Design how to link the slabs
-  // ...
-
-  // TODO: you can add other members
-  // ...
+  struct run *freelist;             // Linked list of free objects
+  struct list_head list;            // For linking slabs in the list
+  int in_use;                   // Number of objects currently in use
+  struct kmem_cache *parent;        // Pointer back to the parent cache
 };
 
 /**
@@ -33,14 +28,17 @@ struct slab
  */
 struct kmem_cache
 {
-  char name[32];        // Cache name (e.g., "file")
-  uint object_size;     // Size of a single object
-  struct spinlock lock; // Lock for cache management
+  char name[32];              // Cache name (e.g., "file")
+  uint object_size;           // Size of a single object
+  struct spinlock lock;       // Lock for cache management
+  
+  struct list_head partial;   // Partially allocated slabs
+  struct list_head full;      // Completely allocated slabs
+  struct list_head free;      // Free slabs
 
-  // TODO: Add slab list(s)
-  // <TYPE> full     // Completely allocated slabs (Optional)
-  // <TYPE> partial  // Partially allocated slabs
-  // <TYPE> free     // Free slabs (Optional)
+  uint max_objs_per_slab;     // Maximum objects that can fit in a slab
+  int in_cache_obj;       // Number of objects that can be stored in kmem_cache itself
+  void *in_cache_freelist;    // Freelist for in-cache objects
 };
 
 /**
