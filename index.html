@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>國語詞語練習單</title>
+<style>
+    :root {
+        --grid-line: #4ca3d9;     /* 框線主色 (藍色) */
+        --dash-line: #99d2f2;     /* 內部虛線 (淺藍色) */
+        --sidebar-bg: #eaf6fc;    /* 右側選單底色 */
+        --badge-purple: #a482c3;  /* 解釋標籤紫 */
+        --badge-pink: #df739b;    /* 造句標籤粉 */
+        --row-height: 55px;       /* 每個格子的基準高度 */
+        --border-width: 1px;      /* 框線粗細 */
+    }
+
+    body {
+        margin: 0;
+        padding: 20px;
+        background-color: #e0e0e0;
+        display: flex;
+        justify-content: center;
+        font-family: 'Kaiti TC', 'BiauKai', 'DFKai-SB', serif; /* 預設標楷體 */
+    }
+
+    /* 列印專屬設定 */
+    @media print {
+        body {
+            padding: 0;
+            background-color: transparent;
+        }
+        .page-container {
+            box-shadow: none !important;
+            margin: 0 !important;
+            padding: 10mm 15mm !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+    }
+
+    .page-container {
+        background: #ffffff;
+        width: 100%;
+        max-width: 850px; /* 適合 A4 寬度 */
+        box-sizing: border-box;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        padding: 30px;
+    }
+
+    /* 主表格區塊 (利用背景色與 gap 形成實線內框) */
+    .worksheet {
+        display: flex;
+        background-color: var(--grid-line);
+        border: var(--border-width) solid var(--grid-line);
+        gap: var(--border-width); 
+        width: 100%;
+    }
+
+    /* 單一直行 (包含單一詞語的所有格子與解釋) */
+    .word-col {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        background-color: var(--grid-line);
+        gap: var(--border-width);
+    }
+
+    /* 單一橫列 (包含國字大格與注音窄格) */
+    .row {
+        display: flex;
+        background-color: var(--grid-line);
+        gap: var(--border-width);
+        height: var(--row-height);
+    }
+
+    /* 國字大格：包含十字虛線背景 */
+    .cell-char {
+        flex: 1;
+        background-color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cline x1='50' y1='0' x2='50' y2='100' stroke='%2399d2f2' stroke-width='1.5' stroke-dasharray='4,4'/%3E%3Cline x1='0' y1='50' x2='100' y2='50' stroke='%2399d2f2' stroke-width='1.5' stroke-dasharray='4,4'/%3E%3C/svg%3E");
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+    }
+
+    /* 注音窄格：包含兩條水平虛線背景 */
+    .cell-zhuyin {
+        width: 34px;
+        background-color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cline x1='0' y1='33.3' x2='100' y2='33.3' stroke='%2399d2f2' stroke-width='1.5' stroke-dasharray='4,4'/%3E%3Cline x1='0' y1='66.6' x2='100' y2='66.6' stroke='%2399d2f2' stroke-width='1.5' stroke-dasharray='4,4'/%3E%3C/svg%3E");
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+    }
+
+    /* 文字樣式設定 */
+    .char {
+        font-size: 40px;
+        color: #000;
+        line-height: 1;
+    }
+
+    .zhuyin {
+        writing-mode: vertical-rl;
+        font-size: 12.5px;
+        font-family: Arial, sans-serif;
+        line-height: 1.1;
+        letter-spacing: 1.5px;
+        color: #000;
+    }
+
+    /* 下方解釋與造句區塊 */
+    .explanation {
+        background-color: #ffffff;
+        flex: 1;
+        min-height: 340px;
+        writing-mode: vertical-rl;
+        padding: 15px 10px;
+        box-sizing: border-box;
+    }
+
+    .explanation p {
+        margin: 0 0 0 12px; /* 垂直排版時的間距控制 */
+        font-size: 14.5px;
+        line-height: 1.6;
+        color: #000;
+        letter-spacing: 1px;
+    }
+
+    /* 釋/句 標籤徽章 */
+    .badge {
+        display: inline-block;
+        color: white;
+        font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif; /* 黑體更清楚 */
+        font-size: 12px;
+        width: 17px;
+        height: 17px;
+        line-height: 17px;
+        text-align: center;
+        border-radius: 2px;
+        margin-bottom: 6px; 
+    }
+
+    .badge-purple { background-color: var(--badge-purple); }
+    .badge-pink { background-color: var(--badge-pink); }
+
+    /* 最右側選單 (訂正、語詞練習、解釋) */
+    .sidebar {
+        width: 44px;
+        display: flex;
+        flex-direction: column;
+        background-color: var(--grid-line);
+        gap: var(--border-width);
+        flex-shrink: 0;
+    }
+
+    .sb-section {
+        background-color: var(--sidebar-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        writing-mode: vertical-rl;
+        font-size: 16px;
+        color: #000;
+    }
+
+    /* 側邊欄高度精準對齊左方橫列 */
+    /* 訂正區：對齊第 1 列 */
+    .sb-dingzheng { 
+        height: var(--row-height); 
+        letter-spacing: 5px; 
+    } 
+    /* 語詞練習區：對齊第 2 到第 9 列 (共 8 列，加上中間 7 條框線) */
+    .sb-yuchi { 
+        height: calc(var(--row-height) * 8 + var(--border-width) * 7); 
+        letter-spacing: 12px; 
+    } 
+    /* 解釋區：填滿下方剩餘空間 */
+    .sb-jieshi { 
+        flex: 1; 
+        letter-spacing: 5px; 
+    }
+
+    /* 頁尾頁碼設定 */
+    .footer {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-top: 20px;
+        padding-right: 5px;
+    }
+
+    .page-num {
+        font-family: Arial, sans-serif;
+        font-size: 22px;
+        font-weight: bold;
+        margin-right: 12px;
+        color: #000;
+    }
+
+    .page-bar {
+        width: 60px;
+        height: 15px;
+        background-color: #d1567d; /* 右下角粉紅長條 */
+    }
+</style>
+</head>
+<body>
+
+<div class="page-container">
+    <div class="worksheet">
+        
+        <!-- Column 1: 光輝 (由左至右視覺排列，右側最後一欄為側邊欄) -->
+        <div class="word-col">
+            <!-- 1. 訂正格 (1格) -->
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <!-- 2. 示範字 (2格) -->
+            <div class="row"><div class="cell-char"><span class="char">光</span></div><div class="cell-zhuyin"><span class="zhuyin">ㄍㄨㄤ</span></div></div>
+            <div class="row"><div class="cell-char"><span class="char">輝</span></div><div class="cell-zhuyin"><span class="zhuyin">ㄏㄨㄟ</span></div></div>
+            <!-- 3. 練習格 (6格) -->
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <!-- 4. 解釋與造句 -->
+            <div class="explanation">
+                <p><span class="badge badge-purple">釋</span>光芒、光彩。</p>
+                <p><span class="badge badge-pink">句</span>聽聞專家的指導後，他的眼神充滿希望的光輝。</p>
+            </div>
+        </div>
+
+        <!-- Column 2: 恢復 -->
+        <div class="word-col">
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"><span class="char">恢</span></div><div class="cell-zhuyin"><span class="zhuyin">ㄏㄨㄟ</span></div></div>
+            <div class="row"><div class="cell-char"><span class="char">復</span></div><div class="cell-zhuyin"><span class="zhuyin">ㄈㄨˋ</span></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="explanation">
+                <p><span class="badge badge-purple">釋</span>回復到原來的樣子。</p>
+                <p><span class="badge badge-pink">句</span>請大家等一下留下來善後，一起恢復場地。</p>
+            </div>
+        </div>
+
+        <!-- Column 3: 尷尬 -->
+        <div class="word-col">
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"><span class="char">尷</span></div><div class="cell-zhuyin"><span class="zhuyin">ㄍㄢ</span></div></div>
+            <div class="row"><div class="cell-char"><span class="char">尬</span></div><div class="cell-zhuyin"><span class="zhuyin">ㄍㄚˋ</span></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="explanation">
+                <p><span class="badge badge-purple">釋</span>不好意思、難為情。</p>
+                <p><span class="badge badge-pink">句</span>面對難以回答的問題，他只好尷尬的笑了一下，思考如何回應。</p>
+            </div>
+        </div>
+
+        <!-- Column 4: 驕傲 -->
+        <div class="word-col">
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"><span class="char">驕</span></div><div class="cell-zhuyin"><span class="zhuyin">ㄐㄧㄠ</span></div></div>
+            <div class="row"><div class="cell-char"><span class="char">傲</span></div><div class="cell-zhuyin"><span class="zhuyin">ㄠˋ</span></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="explanation">
+                <p><span class="badge badge-purple">釋</span>傲慢自大。</p>
+                <p><span class="badge badge-pink">句</span>聰明的他因為性格過於驕傲，總是交不到朋友。</p>
+            </div>
+        </div>
+
+        <!-- Column 5: 慈愛 -->
+        <div class="word-col">
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"><span class="char">慈</span></div><div class="cell-zhuyin"><span class="zhuyin">ㄘˊ</span></div></div>
+            <div class="row"><div class="cell-char"><span class="char">愛</span></div><div class="cell-zhuyin"><span class="zhuyin">ㄞˋ</span></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="explanation">
+                <p><span class="badge badge-purple">釋</span>仁慈且富有愛心。多指長輩對晚輩的愛而言。</p>
+                <p><span class="badge badge-pink">句</span>母親呵護初生的嬰兒，慈愛的眼神充滿光芒。</p>
+            </div>
+        </div>
+
+        <!-- Column 6: 震撼 -->
+        <div class="word-col">
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"><span class="char">震</span></div><div class="cell-zhuyin"><span class="zhuyin">ㄓㄣˋ</span></div></div>
+            <div class="row"><div class="cell-char"><span class="char">撼</span></div><div class="cell-zhuyin"><span class="zhuyin">ㄏㄢˋ</span></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="row"><div class="cell-char"></div><div class="cell-zhuyin"></div></div>
+            <div class="explanation">
+                <p><span class="badge badge-purple">釋</span>震動搖撼。</p>
+                <p><span class="badge badge-pink">句</span>這次國際展覽會的內容豐富又多元，讓我大為震撼。</p>
+            </div>
+        </div>
+
+        <!-- Right Sidebar (最右側選單列) -->
+        <div class="sidebar">
+            <div class="sb-section sb-dingzheng">訂正</div>
+            <div class="sb-section sb-yuchi">語詞練習</div>
+            <div class="sb-section sb-jieshi">解釋</div>
+        </div>
+
+    </div>
+
+    <!-- 頁尾與頁碼 -->
+    <div class="footer">
+        <div class="page-num">20</div>
+        <div class="page-bar"></div>
+    </div>
+</div>
+
+</body>
+</html>
