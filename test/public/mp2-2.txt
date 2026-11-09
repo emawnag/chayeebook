@@ -1,2 +1,0 @@
-echo Ok > ok
-checkstr ok Ok
